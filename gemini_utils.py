@@ -1,9 +1,19 @@
-import google.generativeai as genai
 import os
 import json
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.messages import HumanMessage
 
-genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-model = genai.GenerativeModel("gemini-1.5-flash")
+_llm = None
+
+def _get_llm():
+    global _llm
+    if _llm is None:
+        _llm = ChatGoogleGenerativeAI(
+            model="gemini-1.5-flash",
+            google_api_key=os.environ["GEMINI_API_KEY"],
+            temperature=0.1,
+        )
+    return _llm
 
 CATEGORIES = [
     "Automobile",
@@ -16,8 +26,7 @@ CATEGORIES = [
 
 
 async def parse_intent(problem: str) -> dict:
-    prompt = f"""
-You are Servly AI's intent parser.
+    prompt = f"""You are Servly AI's intent parser.
 Analyze the user's problem and return JSON only.
 
 Problem: "{problem}"
@@ -30,10 +39,11 @@ Return ONLY this JSON (no markdown, no explanation):
   "keywords": ["keyword1", "keyword2"]
 }}
 
-Choose category from: {CATEGORIES}
-"""
-    response = model.generate_content(prompt)
-    text = response.text.strip()
+Choose category from: {CATEGORIES}"""
+
+    llm = _get_llm()
+    response = llm.invoke([HumanMessage(content=prompt)])
+    text = response.content.strip()
 
     # Strip markdown fences if present
     if text.startswith("```"):
