@@ -2,10 +2,22 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
 
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy app files
 COPY . .
+
+# Hugging Face Spaces runs as non-root user
+RUN useradd -m -u 1000 appuser && chown -R appuser /app
+USER appuser
 
 EXPOSE 7860
 
