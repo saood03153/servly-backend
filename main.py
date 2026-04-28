@@ -1,7 +1,8 @@
 from fastapi import FastAPI, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from models import TaskRequest, AcceptTaskRequest, ProviderStatusUpdate
+from models import TaskRequest, AcceptTaskRequest, ProviderStatusUpdate, AgentChatRequest
 from agent import run_agentic_loop
+from langgraph_agent import run_agent
 from gemini_utils import parse_intent
 from database import supabase_client
 
@@ -97,3 +98,35 @@ async def update_provider_status(provider_id: str, body: ProviderStatusUpdate):
         "id", provider_id
     ).execute()
     return {"status": body.status}
+
+
+# ─── LangGraph Agent Chat ────────────────────────────────────────────────────────
+
+@app.post("/api/agent/chat")
+async def agent_chat(request: AgentChatRequest):
+    """
+    Conversational LangGraph agent endpoint.
+    Controls the entire Servly platform via natural language:
+    - Account creation & profile setup
+    - Service search & task creation
+    - Provider notifications & job acceptance
+    - Task completion & provider rating
+
+    Body:
+        message: User's natural language input
+        user_id: (optional) authenticated Supabase user ID
+        conversation_history: (optional) prior turns for multi-turn context
+    """
+    history = [
+        {"role": m.role, "content": m.content}
+        for m in (request.conversation_history or [])
+    ]
+    result = await run_agent(
+        user_message=request.message,
+        conversation_history=history,
+        user_id=request.user_id,
+    )
+    return {
+        "response": result["response"],
+        "history": result["history"],
+    }

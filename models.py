@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 
 
 class TaskRequest(BaseModel):
@@ -16,3 +16,14 @@ class AcceptTaskRequest(BaseModel):
 
 class ProviderStatusUpdate(BaseModel):
     status: str  # online | offline | busy
+
+
+class AgentChatMessage(BaseModel):
+    role: str  # "user" or "assistant"
+    content: str
+
+
+class AgentChatRequest(BaseModel):
+    message: str
+    user_id: Optional[str] = None
+    conversation_history: Optional[List[AgentChatMessage]] = []
